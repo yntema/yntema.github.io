@@ -924,7 +924,7 @@ goog.json.Serializer.prototype.serializeObject_ = function(a, b) {
   b.push("}");
 };
 // Input 2
-var config = {app_service_endpoint:"https://gerrit.branchbeta.link", link_service_endpoint:"https://gerrit.link.beta.branch.io", api_endpoint:"https://safari11.api.beta.branch.io", version:"2.24.1"};
+var config = {app_service_endpoint:"https://app.link", link_service_endpoint:"https://bnc.lt", api_endpoint:"https://api.branch.io", version:"2.24.1"};
 // Input 3
 var safejson = {parse:function(a) {
   a = String(a);
@@ -1210,6 +1210,17 @@ utils.cleanBannerText = function(a) {
 utils.openGraphDataAsObject = function() {
   return {$og_title:utils.scrapeOpenGraphContent("title"), $og_description:utils.scrapeOpenGraphContent("description"), $og_image_url:utils.scrapeOpenGraphContent("image"), $og_video:utils.scrapeOpenGraphContent("video")};
 };
+utils.appendBfpToLinkUrl = function(a, b) {
+  if (!a) {
+    return null;
+  }
+  if (!b) {
+    return a;
+  }
+  var c = "?";
+  -1 < a.indexOf("?") && (c = "&");
+  return a + c + "_t=" + b;
+};
 // Input 6
 var resources = {}, validationTypes = {OBJECT:0, STRING:1, NUMBER:2, ARRAY:3, BOOLEAN:4}, _validator;
 function validator(a, b) {
@@ -1258,7 +1269,7 @@ function defaults(a) {
   var b = {browser_fingerprint_id:validator(!0, branch_id), identity_id:validator(!0, branch_id), sdk:validator(!0, validationTypes.STRING), session_id:validator(!0, branch_id)};
   return utils.merge(a, b);
 }
-resources.open = {destination:config.api_endpoint, endpoint:"/v1/open", method:utils.httpMethod.POST, params:{browser_fingerprint_id:validator(!1, branch_id), alt_browser_fingerprint_id:validator(!1, branch_id), identity_id:validator(!1, branch_id), link_identifier:validator(!1, validationTypes.STRING), sdk:validator(!1, validationTypes.STRING), options:validator(!1, validationTypes.OBJECT), initial_referrer:validator(!1, validationTypes.STRING)}};
+resources.open = {destination:config.api_endpoint, endpoint:"/v1/open", method:utils.httpMethod.POST, params:{browser_fingerprint_id:validator(!1, branch_id), alternative_browser_fingerprint_id:validator(!1, branch_id), identity_id:validator(!1, branch_id), link_identifier:validator(!1, validationTypes.STRING), sdk:validator(!1, validationTypes.STRING), options:validator(!1, validationTypes.OBJECT), initial_referrer:validator(!1, validationTypes.STRING)}};
 resources._r = {destination:config.app_service_endpoint, endpoint:"/_r", method:utils.httpMethod.GET, jsonp:!0, params:{sdk:validator(!0, validationTypes.STRING), _t:validator(!1, branch_id), branch_key:validator(!0, validationTypes.STRING)}};
 resources.linkClick = {destination:"", endpoint:"", method:utils.httpMethod.GET, queryPart:{link_url:validator(!0, validationTypes.STRING)}, params:{click:validator(!0, validationTypes.STRING)}};
 resources.SMSLinkSend = {destination:config.link_service_endpoint, endpoint:"/c", method:utils.httpMethod.POST, queryPart:{link_url:validator(!0, validationTypes.STRING)}, params:{sdk:validator(!1, validationTypes.STRING), phone:validator(!0, validationTypes.STRING)}};
@@ -2252,11 +2263,16 @@ Branch.prototype.init = wrap(callback_params.CALLBACK_ERR_DATA, function(a, b, c
   }, f = session.get(d._storage), g = c && c.url || utils.getWindowLocation(), h = (c && "undefined" !== typeof c.branch_match_id && null !== c.branch_match_id ? c.branch_match_id : null) || utils.getParamValue("_branch_match_id") || utils.hashValue("r"), k = !f || !f.identity_id;
   d._branchViewEnabled = !!d._storage.get("branch_view_enabled");
   var l = function(a) {
-    var b = session.get(d._storage) || {};
-    d._api(resources.hasApp, {browser_fingerprint_id:b.browser_fingerprint_id}, function(c, e) {
-      c && (d.init_state_fail_code = init_state_fail_codes.HAS_APP_FAILED, d.init_state_fail_details = c.message);
-      c || !e || b.has_app || (b.has_app = !0, session.update(d._storage, b), d._publishEvent("didDownloadApp"));
-      a && a(null, b);
+    var b = {sdk:config.version, branch_key:d.branch_key}, c = session.get(d._storage) || {}, e = session.get(d._storage, !0) || {};
+    e.browser_fingerprint_id && (b._t = e.browser_fingerprint_id);
+    utils.isSafari11OrGreater() || d._api(resources._r, b, function(a, b) {
+      a && (d.init_state_fail_code = init_state_fail_codes.BFP_NOT_FOUND, d.init_state_fail_details = a.message);
+      b && (c.browser_fingerprint_id = b);
+    });
+    d._api(resources.hasApp, {browser_fingerprint_id:c.browser_fingerprint_id}, function(b, e) {
+      b && (d.init_state_fail_code = init_state_fail_codes.HAS_APP_FAILED, d.init_state_fail_details = b.message);
+      b || !e || c.has_app || (c.has_app = !0, session.update(d._storage, c), d._publishEvent("didDownloadApp"));
+      a && a(null, c);
     });
   }, m = function() {
     var a = !1;
@@ -2292,7 +2308,7 @@ Branch.prototype.init = wrap(callback_params.CALLBACK_ERR_DATA, function(a, b, c
   } else {
     var f = {sdk:config.version, branch_key:d.branch_key}, q = session.get(d._storage, !0) || {};
     q.browser_fingerprint_id && (f._t = q.browser_fingerprint_id);
-    utils.isSafari11OrGreater() ? d._api(resources.open, {link_identifier:h, alt_browser_fingerprint_id:q.browser_fingerprint_id, options:c, initial_referrer:document.referrer}, function(a, b) {
+    utils.isSafari11OrGreater() ? d._api(resources.open, {link_identifier:h, browser_fingerprint_id:h || q.browser_fingerprint_id, alternative_browser_fingerprint_id:q.browser_fingerprint_id, options:c, initial_referrer:document.referrer}, function(a, b) {
       a && (d.init_state_fail_code = init_state_fail_codes.OPEN_FAILED, d.init_state_fail_details = a.message);
       a || "object" !== typeof b || (d._branchViewEnabled = !!b.branch_view_enabled, d._storage.set("branch_view_enabled", d._branchViewEnabled), h && (b.click_id = h));
       p();
@@ -2301,7 +2317,7 @@ Branch.prototype.init = wrap(callback_params.CALLBACK_ERR_DATA, function(a, b, c
       if (a) {
         return d.init_state_fail_code = init_state_fail_codes.BFP_NOT_FOUND, d.init_state_fail_details = a.message, n(a, null);
       }
-      d._api(resources.open, {link_identifier:h, browser_fingerprint_id:b, alt_browser_fingerprint_id:q.browser_fingerprint_id, options:c, initial_referrer:document.referrer}, function(a, b) {
+      d._api(resources.open, {link_identifier:h, browser_fingerprint_id:h || b, alternative_browser_fingerprint_id:q.browser_fingerprint_id, options:c, initial_referrer:document.referrer}, function(a, b) {
         a && (d.init_state_fail_code = init_state_fail_codes.OPEN_FAILED, d.init_state_fail_details = a.message);
         a || "object" !== typeof b || (d._branchViewEnabled = !!b.branch_view_enabled, d._storage.set("branch_view_enabled", d._branchViewEnabled), h && (b.click_id = h));
         p();
@@ -2367,8 +2383,10 @@ Branch.prototype.track = wrap(callback_params.CALLBACK_ERR, function(a, b, c, d)
   });
 });
 Branch.prototype.link = wrap(callback_params.CALLBACK_ERR_DATA, function(a, b) {
-  this._api(resources.link, utils.cleanLinkData(b), function(b, d) {
-    a(b, d && d.url);
+  var c = this;
+  this._api(resources.link, utils.cleanLinkData(b), function(b, e) {
+    var d = e && e.url, g = session.get(c._storage, !0) || {}, d = utils.appendBfpToLinkUrl(d, g.browser_fingerprint_id);
+    a(b, d);
   });
 });
 Branch.prototype.sendSMS = wrap(callback_params.CALLBACK_ERR, function(a, b, c, d) {
