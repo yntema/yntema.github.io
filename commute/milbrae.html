@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=utf-8>
+  <meta content="width=device-width,initial-scale=1" name=viewport>
+  <title>Milbrae - RC Commute</title>
+  <!-- Latest compiled and minified CSS -->
+  <link type="image/ico" rel="shortcut icon" href="http://www.caltrain.com/SharedSites/3/templates/images/favicon.ico"/>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<style type="text/css">
+  tr.hide {
+    display: none;
+  }
+  tr.show {
+    display: table-row !important;
+  }
+  .alert {
+    font-size: 20px;
+  }
+</style>
+</head>
+<body>
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <div class="navbar-brand">
+          Milbrae - Seaport Commute
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="col-sm-6">
+    <div class="panel panel-default">
+      <div class="panel-heading">AM Schedule <button style="float: right; margin-top: -7px" onclick="filterTable('reset', 'AM')" type="button" class="btn btn-default">reset</button></div>
+      <div class="panel-body">
+        <div>When do you want to get to work</div>
+        <div class="btn-group btn-group-justified" role="group" aria-label="...">
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('7:06', 'AM')" type="button" class="btn btn-default btn-sm">7:06</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('7:51', 'AM')" type="button" class="btn btn-default btn-sm">7:51</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('8:31', 'AM')" type="button" class="btn btn-default btn-sm">8:31</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('9:00', 'AM')" type="button" class="btn btn-default btn-sm">9:00</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('9:31', 'AM')" type="button" class="btn btn-default btn-sm">9:31</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('10:16', 'AM')" type="button" class="btn btn-default btn-sm">10:16</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('10:51', 'AM')" type="button" class="btn btn-default btn-sm">10:51</button>
+          </div>
+        </div>
+      </div>
+      <div id="am-leave-by"></div>
+      <div id="AM"></div>
+    </div>
+  </div>
+  <div class="col-sm-6">
+    <div class="panel panel-default">
+      <div class="panel-heading">PM Schedule <button style="float: right; margin-top: -7px" onclick="filterTable('reset', 'PM')" type="button" class="btn btn-default">reset</button></div>
+      <div class="panel-body">
+        <div>When do you want to get to Milbrae?</div>
+        <div class="btn-group btn-group-justified" role="group" aria-label="...">
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('4:42', 'PM')" type="button" class="btn btn-default btn-sm">4:42</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('5:10', 'PM')" type="button" class="btn btn-default btn-sm">5:10</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('5:48', 'PM')" type="button" class="btn btn-default btn-sm">5:48</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('6:48', 'PM')" type="button" class="btn btn-default btn-sm">6:48</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('7:41', 'PM')" type="button" class="btn btn-default btn-sm">7:41</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button onclick="filterTable('8:52', 'PM')" type="button" class="btn btn-default btn-sm">8:52</button>
+          </div>
+        </div>
+      </div>
+      <div id="pm-leave-by"></div>
+      <div id="PM"></div>
+    </div>
+  </div>
+  <div class="col-xs-12">
+    <div class="panel panel-default">
+      <div class="container-fluid">
+        <ul class="nav navbar-nav navbar-left">
+          <li><a href="http://www.caltrain.com/schedules/weekdaytimetable.html" target="_blank" rel="noopener noreferrer">Caltrain Weekday</a></li>
+          <li><a href="http://www.caltrain.com/schedules/Shuttles/Pacific_Shores_Shuttle.html" target="_blank" rel="noopener noreferrer">Pacific Shores Shuttle</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+<script type="text/javascript">
+  var COLUMN_NAMES = {
+    leave_milbrae: 'Leave Milbrae',
+    arrive_rc: 'Arrive RC',
+    leave_rc: 'Leave RC',
+    arrive_office: 'Arrive Office',
+    leave_office: 'Leave Office',
+    arrive_rc: 'Arrive RC',
+    leave_rc: 'Leave RC',
+    arrive_milbrae: 'Arrive Milbrae',
+    total: 'Travel Time'
+  }
+
+  var STATIONS = {
+    AM: ['leave_milbrae', 'arrive_rc', 'leave_rc', 'arrive_office', 'total'],
+    PM: ['leave_office', 'arrive_rc', 'leave_rc', 'arrive_milbrae', 'total']
+  }
+  var AM_TABLE = [
+    ['6:22','6:44','6:52','7:06'],
+    ['7:16','7:31','7:37','7:51'],
+    ['7:52','8:11','8:17','8:31'],
+    ['8:16','8:31','8:46','9:00'],
+    ['8:52','9:11','9:17','9:31'],
+    ['9:25','9:51','10:02','10:16'],
+    ['10:01','10:26','10:37','10:51']
+  ]
+  var PM_TABLE = [
+    ['3:48','4:09','4:24','4:42'],
+    ['4:27','4:48','5:53','5:10'],
+    ['5:07','5:28','5:29','5:48'],
+    ['6:03','6:24','6:29','6:48'],
+    ['6:42','7:03','7:20','7:41'],
+    ['7:53','8:14','8:27','8:52']
+  ]
+
+  function mapTotals(r) {
+    r[4] = getTotalTime(r[0], r[3])
+    return r;
+  }
+  const AM_TOTALS = AM_TABLE.map(mapTotals)
+  const PM_TOTALS = PM_TABLE.map(mapTotals)
+
+  function timeStringToFloat(time) {
+    var hoursMinutes = time.split(/[.:]/);
+    var hours = parseInt(hoursMinutes[0], 10);
+    var minutes = hoursMinutes[1] ? parseInt(hoursMinutes[1], 10) : 0;
+    return hours + minutes / 60;
+  }
+  function floatToHour(num, separator) {
+    if (!separator) {
+      separator = 'h';
+    }
+    var sign = num >= 0 ? 1 : -1;
+    var min = 1 / 60;
+   
+    // Get positive value of num
+    num = num * sign;
+   
+    // Separate the int from the decimal part
+    var intpart = Math.floor(num);
+    var decpart = num - intpart;
+   
+    // Round to nearest minute
+    decpart = min * Math.round(decpart / min);
+   
+    var minutes = Math.floor(decpart * 60);
+   
+    // Sign result
+    sign = sign == 1 ? '' : '-';
+   
+    // pad() adds a leading zero if needed
+    // return sign + intpart + 'h' + pad(minutes, 2);
+    return sign + intpart + separator + minutes;
+  }
+  function displayHoursMinutes(num) {
+    var date = new Date(num * 3600 * 1000);
+    return ('' + date.getUTCHours()  ).slice(-2) + ':' +
+           ('0' + date.getUTCMinutes()).slice(-2);
+  };
+  function getTotalTime(leave, arrive) {
+    if (!leave || !arrive) {
+      return null;
+    }
+    leave = timeStringToFloat(leave)
+    arrive = timeStringToFloat(arrive)
+    return Math.round((arrive - leave) * 100) / 100;
+  }
+
+  function CreateTableFromJSON(data, type) {
+    var col = data[0];
+
+    var table = document.createElement("table");
+    table.classList.add('table')
+
+    var thead = table.createTHead();
+
+    col.forEach((c, i) => {
+        var th = document.createElement("th");
+        th.innerHTML = COLUMN_NAMES[STATIONS[type][i]];
+        thead.appendChild(th);
+    })
+
+    data.forEach(r => {
+      tr = table.insertRow(-1)
+      r.forEach((value, i) => {
+        var tabCell = tr.insertCell(-1);
+
+
+        if (typeof value === 'number') {
+          if (value > 0.75) {
+            tr.classList.add('danger')
+          }
+          value = floatToHour(value);
+        }
+        if (!value) {
+          value = ''
+        }
+        tabCell.innerHTML = value;
+        tabCell.className = STATIONS[type][i];
+      })
+    })
+    var divContainer = document.getElementById(type);
+    divContainer.innerHTML = "";
+    divContainer.appendChild(table);
+}
+
+CreateTableFromJSON(AM_TOTALS, 'AM')
+CreateTableFromJSON(PM_TOTALS, 'PM')
+
+
+</script>
+<script type="text/javascript">
+
+  function filterTable(value, type) {
+    var arrive = type === 'AM' ? 'arrive_office' : 'arrive_milbrae'
+    var leave = type === 'AM' ? 'leave_milbrae' : 'leave_office'
+    var leaveby = type === 'AM' ? 'am-leave-by' : 'pm-leave-by';
+    var leaveBy = document.getElementById(leaveby);
+
+    var selectedTime = timeStringToFloat(value)
+
+    var table = document.getElementById(type)
+    var rows = table.getElementsByTagName('tr');
+    var rowsLength = rows.length;
+
+    var selected = false
+    for (var i = rowsLength - 1; i >= 0; i--) {
+      if (value === 'reset') {
+        rows[i].classList.remove('hide')
+        leaveBy.classList.add('hide');
+        continue;
+      }
+      rows[i].classList.add('hide')
+      var arriveEl = rows[i].getElementsByClassName(arrive)[0];
+      var leaveEl = rows[i].getElementsByClassName(leave)[0];
+      var cellValue = arriveEl.innerText;
+      var cellTime = timeStringToFloat(cellValue);
+      if (cellTime <= selectedTime && !selected) {
+        arriveEl.parentNode.classList.remove('hide');
+        leaveBy.classList.add('alert')
+        leaveBy.classList.add('alert-success')
+        var end = type === 'AM' ? 'AM train' : 'PM shuttle';
+        leaveBy.innerText = 'Take the ' + leaveEl.innerText + ' ' + end;
+        leaveBy.classList.remove('hide')
+        selected = true;
+      }
+    }
+  }
+</script>
+</html>
